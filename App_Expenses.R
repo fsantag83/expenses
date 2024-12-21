@@ -1,13 +1,5 @@
 # Load required libraries
-library(shiny)
-library(shinydashboard)
-library(googlesheets4)
-library(dplyr)
-library(ggplot2)
-library(DT)
-
-library(dplyr)
-library(tidyr)
+library(magrittr)
 
 calculate_balances <- function(trans) {
   balances <- data.frame(
