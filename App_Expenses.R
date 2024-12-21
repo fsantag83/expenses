@@ -49,7 +49,7 @@ calculate_balances <- function(trans) {
 
 
 # Authenticate Google Sheets (run this once interactively)
-googlesheets4::gs4_auth()
+googlesheets4::gs4_auth(path = "family-budget-397209-3c287def2b7d.json")
 
 # Google Sheets URL (replace with your actual Google Sheets URL)
 sheet_url <- "https://docs.google.com/spreadsheets/d/15rsACC6AVjkGE3J-2WbCmu1Qo01hXdhu41zDu7r8QIc"
@@ -414,20 +414,20 @@ server <- function(input, output, session) {
       dplyr::mutate(Group = "Category") %>%
       dplyr::relocate(Group, .before = Month)
     
-    df <- bind_rows(total_monthly, adrian_monthly, fernando_monthly, category_monthly)
+    df <- dplyr::bind_rows(total_monthly, adrian_monthly, fernando_monthly, category_monthly)
     
     cat <- levels(factor(unique(df$Category)[-c(1:3)]))
     
     df <- df %>% dplyr::mutate(Group = base::factor(Group, levels = c("Payer","Category")),
                                Category = base::factor(Category, levels = c("Total","Adrian","Fernando",cat)))
   
-    ggplot2::ggplot(df, aes(x = Month, y = Total, colour = Category, group = Category)) +
-      geom_line() +
-      facet_wrap(vars(Group)) +
-      labs(y = "Total Spending", x = "Month") +
-      theme_minimal() +
-      theme(legend.position = "bottom",legend.title = element_blank()) +
-      guides(colour = guide_legend(ncol = 3)) 
+    ggplot2::ggplot(df, ggplot2::aes(x = Month, y = Total, colour = Category, group = Category)) +
+      ggplot2::geom_line() +
+      ggplot2::facet_wrap(ggplot2::vars(Group)) +
+      ggplot2::labs(y = "Total Spending", x = "Month") +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(legend.position = "bottom",legend.title = ggplot2::element_blank()) +
+      ggplot2::guides(colour = ggplot2::guide_legend(ncol = 3)) 
   })
   
   output$plot_trend_with_selector_eur <- renderUI({
@@ -489,20 +489,20 @@ server <- function(input, output, session) {
       dplyr::mutate(Group = "Category") %>%
       dplyr::relocate(Group, .before = Month)
     
-    df <- bind_rows(total_monthly, adrian_monthly, fernando_monthly, category_monthly)
+    df <- dplyr::bind_rows(total_monthly, adrian_monthly, fernando_monthly, category_monthly)
     
     cat <- levels(factor(unique(df$Category)[-c(1:3)]))
     
     df <- df %>% dplyr::mutate(Group = base::factor(Group, levels = c("Payer","Category")),
                                Category = base::factor(Category, levels = c("Total","Adrian","Fernando",cat)))
     
-    ggplot2::ggplot(df, aes(x = Month, y = Total, colour = Category, group = Category)) +
-      geom_line() +
-      facet_wrap(vars(Group)) +
-      labs(y = "Total Spending", x = "Month") +
-      theme_minimal() +
-      theme(legend.position = "bottom",legend.title = element_blank()) +
-      guides(colour = guide_legend(ncol = 3)) 
+    ggplot2::ggplot(df, ggplot2::aes(x = Month, y = Total, colour = Category, group = Category)) +
+      ggplot2::geom_line() +
+      ggplot2::facet_wrap(ggplot2::vars(Group)) +
+      ggplot2::labs(y = "Total Spending", x = "Month") +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(legend.position = "bottom",legend.title = ggplot2::element_blank()) +
+      ggplot2::guides(colour = ggplot2::guide_legend(ncol = 3)) 
   })
   
 }
