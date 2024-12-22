@@ -41,6 +41,7 @@ calculate_balances <- function(trans) {
   
   # Return net balances as a tibble
   tibble::tibble(
+    Total = sum(trans$Amount),
     Adrian = net_balances["Adrian"],
     Fernando = net_balances["Fernando"],
     Family = net_balances["Family"]
@@ -119,13 +120,9 @@ ui <- shinydashboard::dashboardPage(
       shinydashboard::tabItem(
         tabName = "dashboard_chf",
         shiny::fluidRow(
-          shinydashboard::box(title = "Summary (CHF)", width = 12,
-                              shiny::verbatimTextOutput("summary_chf")),
-          shinydashboard::box(title = "Balances (CHF)", width = 12,
-                              reactable::reactableOutput("balances_table_chf")),
-          shinydashboard::box(title = "Spending by Category (CHF)", width = 12, 
-                              shiny::uiOutput("plot_with_selector_chf")),  # Dynamic UI for the plot and selector
-          shinydashboard::box(title = "Monthly Spending Trends (CHF)", width = 12, 
+          shinydashboard::box(title = "Summary", width = 12, 
+                              shiny::uiOutput("month_year_chf")),  # Dynamic UI for monthly payments
+          shinydashboard::box(title = "Monthly Spending Trends", width = 12, 
                               shiny::uiOutput("plot_trend_with_selector_chf"))
           
         )
@@ -134,14 +131,10 @@ ui <- shinydashboard::dashboardPage(
       shinydashboard::tabItem(
         tabName = "dashboard_eur",
         shiny::fluidRow(
-          shinydashboard::box(title = "Summary (EUR)", width = 12,
-                              shiny::verbatimTextOutput("summary_eur")),
-          shinydashboard::box(title = "Balances (EUR)", width = 12,
-                              reactable::reactableOutput("balances_table_eur")),
-          shinydashboard::box(title = "Spending by Category (EUR)", width = 12,
-                              shiny::uiOutput("plot_with_selector_eur")),  # Dynamic UI for the plot and selector
-          shinydashboard::box(title = "Monthly Spending Trends (EUR)", width = 12, 
-                              shiny::uiOutput("plot_trend_with_selector_eur"))  # Dynamic UI for the plot and selector
+          shinydashboard::box(title = "Summary", width = 12, 
+                              shiny::uiOutput("month_year_eur")),  # Dynamic UI for monthly payments
+          shinydashboard::box(title = "Monthly Spending Trends", width = 12, 
+                              shiny::uiOutput("plot_trend_with_selector_eur"))
         )
       )
     )
@@ -220,36 +213,26 @@ server <- function(input, output, session) {
     googlesheets4::sheet_append(sheet_url, new_transaction)
     shiny::showNotification("Transaction Saved!")
   })
-        
-  # Filtered Transactions
+  
+  output$month_year_chf <- renderUI({
+    # Inline UI elements
+    tagList(
+      shiny::fluidRow(
+        shiny::column(6, shiny::selectInput("yearInputCHF1", "Year", choices = c(2024,2025), selected = 2024)),
+        shiny::column(6, shiny::selectInput("monthInputCHF", "Month", choices = month.name, selected = format(Sys.Date(), "%B")))
+      ),
+      reactable::reactableOutput("balances_table_chf"),
+      shiny::plotOutput("category_plot_chf")
+    )
+  })
+  
   transactions_chf <- shiny::reactive({
-    transactions_data() %>% dplyr::filter(Currency == "CHF")
-  })
-  
-  transactions_eur <- shiny::reactive({
-    transactions_data() %>% dplyr::filter(Currency == "EUR")
-  })
-  
-  # Summary Outputs
-  output$summary_chf <- shiny::renderText({
-    total_spent <- sum(transactions_chf()$Amount, na.rm = TRUE)
-    paste("Total Spent (CHF):", total_spent)
-  })
-  
-  output$summary_eur <- shiny::renderText({
-    total_spent <- sum(transactions_eur()$Amount, na.rm = TRUE)
-    paste("Total Spent (EUR):", total_spent)
+    transactions_data() %>% dplyr::filter(Currency == "CHF" & lubridate::year(TransactionDate) == input$yearInputCHF1 & Month == input$monthInputCHF)
   })
   
   # Balances Tables
   balances_chf <- shiny::reactive({
     trans <- transactions_chf()
-    calculate_balances(trans)
-  })
-
-  # Balances Tables    
-  balances_eur <- shiny::reactive({
-    trans <- transactions_eur()
     calculate_balances(trans)
   })
   
@@ -276,104 +259,46 @@ server <- function(input, output, session) {
       ),
       bordered = TRUE,
       highlight = TRUE,
-      defaultPageSize = 3,  # Show all members in a single page
+      defaultPageSize = 4,  # Show all members in a single page
       striped = TRUE
     )
   })
-  
-  # Render Balances Table for EUR
-  output$balances_table_eur <- reactable::renderReactable({
-    # Retrieve the net balances for EUR
-    net_balances <- balances_eur()
-    
-    # Convert the single-row tibble to a format suitable for reactable
-    reactable_data <- tibble::tibble(
-      Member = names(net_balances),
-      NetBalance = as.numeric(net_balances)
-    )
-    
-    # Render the reactable table
-    reactable::reactable(
-      reactable_data,
-      columns = list(
-        Member = reactable::colDef(name = "Member"),
-        NetBalance = reactable::colDef(
-          name = "Net Balance (EUR)",
-          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "€ ")
-        )
-      ),
-      bordered = TRUE,
-      highlight = TRUE,
-      defaultPageSize = 3,  # Show all members in a single page
-      striped = TRUE
-    )
-  })
-  
-  output$plot_with_selector_chf <- renderUI({
-    # Inline UI elements
-    tagList(
-      shiny::selectInput("monthInputCHF", "Month", choices = month.name, selected = format(Sys.Date(), "%B")),
-      shiny::plotOutput("category_plot_chf")
-    )
-  })
-  
+ 
   # Spending by Category Plots
   output$category_plot_chf <- renderPlot({
     # Fetch and prepare data
     data <- transactions_chf() %>%
-                    dplyr::group_by(Month, Category) %>%
-                    dplyr::summarize(Total = sum(Amount, na.rm = TRUE))
+      dplyr::group_by(Month, Category) %>%
+      dplyr::summarize(Total = sum(Amount, na.rm = TRUE))
     
     # Initial plot
-    initial_data <- dplyr::filter(data, Month == input$monthInputCHF)
+    initial_data <- dplyr::filter(data)
     ggplot2::ggplot(initial_data, ggplot2::aes(y = stats::reorder(Category, Total), x = Total)) +
       ggplot2::geom_bar(stat = "identity") +
       ggplot2::theme_minimal() +
       ggplot2::labs(x = "Total Amount", y = "Category")
   })
 
-  output$plot_with_selector_eur <- renderUI({
-    # Inline UI elements
-    tagList(
-      shiny::selectInput("monthInputEUR", "Month", choices = month.name, selected = format(Sys.Date(), "%B")),
-      shiny::plotOutput("category_plot_eur")
-    )
-  })  
-    
-  # Spending by Category Plots
-  output$category_plot_eur <- renderPlot({
-    # Fetch and prepare data
-    data <- transactions_eur() %>%
-      dplyr::group_by(Month, Category) %>%
-      dplyr::summarize(Total = sum(Amount, na.rm = TRUE))
-    
-    # Initial plot
-    initial_data <- dplyr::filter(data, Month == input$monthInputEUR)
-    ggplot2::ggplot(initial_data, ggplot2::aes(y = stats::reorder(Category, Total), x = Total)) +
-      ggplot2::geom_bar(stat = "identity") +
-      ggplot2::theme_minimal() +
-      ggplot2::labs(x = "Total Amount", y = "Category")
-  })
   
   output$plot_trend_with_selector_chf <- renderUI({
     # Inline UI elements
     tagList(
-      shiny::selectInput("yearInputCHF", "Month", choices = c(2024,2025), selected = 2024),
-      shiny::plotOutput("category_plot_CHF")
+      shiny::selectInput("yearInputCHF", "Year", choices = c(2024,2025), selected = 2024),
+      shiny::plotOutput("trend_plot_CHF")
     )
   })  
   
   # Spending by Category Plots
-  output$category_plot_CHF <- renderPlot({
+  output$trend_plot_CHF <- renderPlot({
     # Fetch and prepare data
-    data <- transactions_chf() %>%
-      dplyr::filter(lubridate::year(TransactionDate) == input$yearInputCHF) %>%
+    data <- transactions_data() %>% 
+      dplyr::filter(Currency == "CHF" & lubridate::year(TransactionDate) == input$yearInputCHF) %>%
       dplyr::group_by(Month, Category) %>%
       dplyr::summarize(Total = sum(Amount),
                        Total_A = sum(Contribution_Adrian),
                        Total_F = sum(Contribution_Fernando), .groups = 'drop') %>%
       dplyr::arrange(desc(Total))
-      
+    
     # Total Monthly Spending
     total_monthly <- data %>%
       dplyr::group_by(Month) %>%
@@ -420,7 +345,7 @@ server <- function(input, output, session) {
     
     df <- df %>% dplyr::mutate(Group = base::factor(Group, levels = c("Payer","Category")),
                                Category = base::factor(Category, levels = c("Total","Adrian","Fernando",cat)))
-  
+    
     ggplot2::ggplot(df, ggplot2::aes(x = Month, y = Total, colour = Category, group = Category)) +
       ggplot2::geom_line() +
       ggplot2::facet_wrap(ggplot2::vars(Group)) +
@@ -430,19 +355,86 @@ server <- function(input, output, session) {
       ggplot2::guides(colour = ggplot2::guide_legend(ncol = 3)) 
   })
   
+    
+  output$month_year_eur <- renderUI({
+    # Inline UI elements
+    tagList(
+      shiny::fluidRow(
+        shiny::column(6, shiny::selectInput("yearInputEUR1", "Year", choices = c(2024,2025), selected = 2024)),
+        shiny::column(6, shiny::selectInput("monthInputEUR", "Month", choices = month.name, selected = format(Sys.Date(), "%B")))
+      ),
+      reactable::reactableOutput("balances_table_eur"),
+      shiny::plotOutput("category_plot_eur")
+    )
+  })
+  
+  transactions_eur <- shiny::reactive({
+    transactions_data() %>% dplyr::filter(Currency == "EUR" & lubridate::year(TransactionDate) == input$yearInputEUR1 & Month == input$monthInputEUR)
+  })
+  
+  # Balances Tables
+  balances_eur <- shiny::reactive({
+    trans <- transactions_eur()
+    calculate_balances(trans)
+  })
+  
+  # Render Balances Table for EUR
+  output$balances_table_eur <- reactable::renderReactable({
+    # Retrieve the net balances for EUR
+    net_balances <- balances_eur()
+    
+    # Convert the single-row tibble to a format suitable for reactable
+    reactable_data <- tibble::tibble(
+      Member = names(net_balances),
+      NetBalance = as.numeric(net_balances)
+    )
+    
+    # Render the reactable table
+    reactable::reactable(
+      reactable_data,
+      columns = list(
+        Member = reactable::colDef(name = "Member"),
+        NetBalance = reactable::colDef(
+          name = "Net Balance (EUR)",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "Fr. ")
+        )
+      ),
+      bordered = TRUE,
+      highlight = TRUE,
+      defaultPageSize = 4,  # Show all members in a single page
+      striped = TRUE
+    )
+  })
+  
+  # Spending by Category Plots
+  output$category_plot_eur <- renderPlot({
+    # Fetch and prepare data
+    data <- transactions_eur() %>%
+      dplyr::group_by(Month, Category) %>%
+      dplyr::summarize(Total = sum(Amount, na.rm = TRUE))
+    
+    # Initial plot
+    initial_data <- dplyr::filter(data)
+    ggplot2::ggplot(initial_data, ggplot2::aes(y = stats::reorder(Category, Total), x = Total)) +
+      ggplot2::geom_bar(stat = "identity") +
+      ggplot2::theme_minimal() +
+      ggplot2::labs(x = "Total Amount", y = "Category")
+  })
+  
+  
   output$plot_trend_with_selector_eur <- renderUI({
     # Inline UI elements
     tagList(
-      shiny::selectInput("yearInputEUR", "Month", choices = c(2024,2025), selected = 2024),
-      shiny::plotOutput("category_plot_EUR")
+      shiny::selectInput("yearInputEUR", "Year", choices = c(2024,2025), selected = 2024),
+      shiny::plotOutput("trend_plot_EUR")
     )
   })  
   
   # Spending by Category Plots
-  output$category_plot_EUR <- renderPlot({
+  output$trend_plot_EUR <- renderPlot({
     # Fetch and prepare data
-    data <- transactions_eur() %>%
-      dplyr::filter(lubridate::year(TransactionDate) == input$yearInputEUR) %>%
+    data <- transactions_data() %>% 
+      dplyr::filter(Currency == "EUR" & lubridate::year(TransactionDate) == input$yearInputEUR) %>%
       dplyr::group_by(Month, Category) %>%
       dplyr::summarize(Total = sum(Amount),
                        Total_A = sum(Contribution_Adrian),
