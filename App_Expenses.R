@@ -103,10 +103,12 @@ ui <- shinydashboard::dashboardPage(
               inputId = "category",
               label = "Category",
               choices = c(
-                "Books", "Cleaning", "Clothing", "Eating out", "Education",
-                "Electronics", "Elevenses","Energie", "Flights", "Gas", "Gifts",
+                "Adoption",
+                "Books","Cash","Cleaning", "Clothing", "Eating out", "Education",
+                "Electronics", "Elevenses","Energie","Entertainment",
+                "Flights", "Gas", "Gifts",
                 "Groceries (inkl. Pharmacy)", "Health", "Holidays", "Hotels",
-                "iCloud", "Insurances", "Internet TV", "Others", "Personal Care","Real Estate",
+                "iCloud", "Installment CC","Insurances", "Internet TV", "Others", "Personal Care","Real Estate","Refunds",
                 "Taxes", "Transportation", "Wellness"
               ),
               selected = "Others"
@@ -156,7 +158,7 @@ server <- function(input, output, session) {
           dplyr::mutate(
             Timestamp = as.POSIXct(Timestamp, tz = "UTC"),
             TransactionDate = as.Date(TransactionDate),
-            Month = factor(format(as.Date(TransactionDate), "%B"), levels = month.name),
+            Month = factor(Month, levels = month.name),
             Payer = as.character(Payer),
             Currency = as.character(Currency),
             Amount = as.numeric(Amount),
@@ -222,7 +224,8 @@ server <- function(input, output, session) {
         shiny::column(6, shiny::selectInput("monthInputCHF", "Month", choices = month.name, selected = format(Sys.Date(), "%B")))
       ),
       reactable::reactableOutput("balances_table_chf"),
-      shiny::plotOutput("category_plot_chf")
+      shiny::plotOutput("category_plot_chf"),
+      reactable::reactableOutput("category_table_chf")
     )
   })
   
@@ -279,7 +282,49 @@ server <- function(input, output, session) {
       ggplot2::labs(x = "Total Amount", y = "Category")
   })
 
-  
+  output$category_table_chf <- reactable::renderReactable({
+    # Retrieve the net balances for EUR
+    data <- transactions_chf() %>% dplyr::select(c(Amount,Contribution_Adrian,Contribution_Fernando,Contribution_Family,Category)) %>%
+      dplyr::group_by(Category) %>%
+      dplyr::summarise(Total = sum(Amount),
+                       Total_A = sum(Contribution_Adrian),
+                       Total_F = sum(Contribution_Fernando),
+                       Total_Fa = sum(Contribution_Family)) %>%
+      dplyr::arrange(desc(Total))
+    
+    # Convert the single-row tibble to a format suitable for reactable
+    reactable_data <- tibble::tibble(data)
+    
+    
+    # Render the reactable table
+    reactable::reactable(
+      reactable_data,
+      columns = list(
+        Category = reactable::colDef(name = "Category"),
+        Total = reactable::colDef(
+          name = "Total",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "Fr. ")
+        ),
+        Total_A = reactable::colDef(
+          name = "Adrian",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "Fr. ")
+        ),
+        Total_F = reactable::colDef(
+          name = "Fernando",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "Fr. ")
+        ),
+        Total_Fa = reactable::colDef(
+          name = "Familia",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "Fr. ")
+        )
+      ),
+      bordered = TRUE,
+      highlight = TRUE,
+      defaultPageSize = 10,  # Show all members in a single page
+      striped = TRUE
+    )
+  })
+    
   output$plot_trend_with_selector_chf <- renderUI({
     # Inline UI elements
     tagList(
@@ -364,7 +409,8 @@ server <- function(input, output, session) {
         shiny::column(6, shiny::selectInput("monthInputEUR", "Month", choices = month.name, selected = format(Sys.Date(), "%B")))
       ),
       reactable::reactableOutput("balances_table_eur"),
-      shiny::plotOutput("category_plot_eur")
+      shiny::plotOutput("category_plot_eur"),
+      reactable::reactableOutput("category_table_eur")
     )
   })
   
@@ -396,7 +442,7 @@ server <- function(input, output, session) {
         Member = reactable::colDef(name = "Member"),
         NetBalance = reactable::colDef(
           name = "Net Balance (EUR)",
-          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "Fr. ")
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "€ ")
         )
       ),
       bordered = TRUE,
@@ -421,6 +467,48 @@ server <- function(input, output, session) {
       ggplot2::labs(x = "Total Amount", y = "Category")
   })
   
+  output$category_table_eur <- reactable::renderReactable({
+    # Retrieve the net balances for EUR
+    data <- transactions_eur() %>% dplyr::select(c(Amount,Contribution_Adrian,Contribution_Fernando,Contribution_Family,Category)) %>%
+                                   dplyr::group_by(Category) %>%
+                                   dplyr::summarise(Total = sum(Amount),
+                                                    Total_A = sum(Contribution_Adrian),
+                                                    Total_F = sum(Contribution_Fernando),
+                                                    Total_Fa = sum(Contribution_Family)) %>%
+                                   dplyr::arrange(desc(Total))
+    
+    # Convert the single-row tibble to a format suitable for reactable
+    reactable_data <- tibble::tibble(data)
+      
+    
+    # Render the reactable table
+    reactable::reactable(
+      reactable_data,
+      columns = list(
+        Category = reactable::colDef(name = "Category"),
+        Total = reactable::colDef(
+          name = "Total",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "€ ")
+        ),
+        Total_A = reactable::colDef(
+          name = "Adrian",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "€ ")
+        ),
+        Total_F = reactable::colDef(
+          name = "Fernando",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "€ ")
+        ),
+        Total_Fa = reactable::colDef(
+          name = "Familia",
+          format = reactable::colFormat(separators = TRUE, digits = 2, prefix = "€ ")
+        )
+      ),
+      bordered = TRUE,
+      highlight = TRUE,
+      defaultPageSize = 10,  # Show all members in a single page
+      striped = TRUE
+    )
+  })
   
   output$plot_trend_with_selector_eur <- renderUI({
     # Inline UI elements
