@@ -185,11 +185,6 @@ server <- function(input, output, session) {
   shiny::observeEvent(input$save_transaction, {
     total_contribution <- input$contribution_adrian + input$contribution_fernando + input$contribution_family
     
-    if (total_contribution != 100) {
-      shiny::showNotification("Error: Contributions must sum to 100%", type = "error")
-      return()
-    }
-    
     if (input$amount <= 0) {
       shiny::showNotification("Error: Amount must be positive", type = "error")
       return()
@@ -210,11 +205,15 @@ server <- function(input, output, session) {
       stringsAsFactors = FALSE
     )
     
-    # Append the transaction to the data
-    transactions(dplyr::bind_rows(transactions(), new_transaction))
-    googlesheets4::sheet_append(sheet_url, new_transaction)
+    # Append the transaction to the cached data
+    current_data <- transactions_data()
+    updated_data <- dplyr::bind_rows(current_data, new_transaction)
+    transactions_data(updated_data)  # Update the reactive value with new data
+    
+    googlesheets4::sheet_append(sheet_url, new_transaction)  # Append the new transaction to Google Sheets
     shiny::showNotification("Transaction Saved!")
   })
+  
   
   output$month_year_chf <- renderUI({
     # Inline UI elements
