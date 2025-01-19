@@ -96,8 +96,8 @@ ui <- shinydashboard::dashboardPage(
               inline = TRUE
             ),
             shiny::numericInput("amount", "Amount", value = 0, min = 0),
-            shiny::numericInput("contribution_adrian", "Adrian's Contribution (%)", value = 41.97, min = 0, max = 100),
-            shiny::numericInput("contribution_fernando", "Fernando's Contribution (%)", value = 58.03, min = 0, max = 100),
+            shiny::numericInput("contribution_adrian", "Adrian's Contribution (%)", value = 43.98, min = 0, max = 100),
+            shiny::numericInput("contribution_fernando", "Fernando's Contribution (%)", value = 56.02, min = 0, max = 100),
             shiny::numericInput("contribution_family", "Family's Contribution (%)", value = 0, min = 0, max = 100),
             shiny::radioButtons(
               inputId = "category",
@@ -219,7 +219,7 @@ server <- function(input, output, session) {
     # Inline UI elements
     tagList(
       shiny::fluidRow(
-        shiny::column(6, shiny::selectInput("yearInputCHF1", "Year", choices = c(2024,2025), selected = 2024)),
+        shiny::column(6, shiny::selectInput("yearInputCHF1", "Year", choices = c(2024,2025), selected = 2025)),
         shiny::column(6, shiny::selectInput("monthInputCHF", "Month", choices = month.name, selected = format(Sys.Date(), "%B")))
       ),
       reactable::reactableOutput("balances_table_chf"),
@@ -327,7 +327,7 @@ server <- function(input, output, session) {
   output$plot_trend_with_selector_chf <- renderUI({
     # Inline UI elements
     tagList(
-      shiny::selectInput("yearInputCHF", "Year", choices = c(2024,2025), selected = 2024),
+      shiny::selectInput("yearInputCHF", "Year", choices = c(2024,2025), selected = 2025),
       shiny::plotOutput("trend_plot_CHF")
     )
   })  
@@ -404,7 +404,7 @@ server <- function(input, output, session) {
     # Inline UI elements
     tagList(
       shiny::fluidRow(
-        shiny::column(6, shiny::selectInput("yearInputEUR1", "Year", choices = c(2024,2025), selected = 2024)),
+        shiny::column(6, shiny::selectInput("yearInputEUR1", "Year", choices = c(2024,2025), selected = 2025)),
         shiny::column(6, shiny::selectInput("monthInputEUR", "Month", choices = month.name, selected = format(Sys.Date(), "%B")))
       ),
       reactable::reactableOutput("balances_table_eur"),
@@ -512,7 +512,7 @@ server <- function(input, output, session) {
   output$plot_trend_with_selector_eur <- renderUI({
     # Inline UI elements
     tagList(
-      shiny::selectInput("yearInputEUR", "Year", choices = c(2024,2025), selected = 2024),
+      shiny::selectInput("yearInputEUR", "Year", choices = c(2024,2025), selected = 2025),
       shiny::plotOutput("trend_plot_EUR")
     )
   })  
