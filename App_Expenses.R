@@ -96,8 +96,8 @@ ui <- shinydashboard::dashboardPage(
               inline = TRUE
             ),
             shiny::numericInput("amount", "Amount", value = 0, min = 0),
-            shiny::numericInput("contribution_adrian", "Adrian's Contribution (%)", value = 43.98, min = 0, max = 100),
-            shiny::numericInput("contribution_fernando", "Fernando's Contribution (%)", value = 56.02, min = 0, max = 100),
+            shiny::numericInput("contribution_adrian", "Adrian's Contribution (%)", value = 43.96, min = 0, max = 100),
+            shiny::numericInput("contribution_fernando", "Fernando's Contribution (%)", value = 56.04, min = 0, max = 100),
             shiny::numericInput("contribution_family", "Family's Contribution (%)", value = 0, min = 0, max = 100),
             shiny::radioButtons(
               inputId = "category",
